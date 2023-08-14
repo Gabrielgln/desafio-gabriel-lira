@@ -16,18 +16,19 @@ class CaixaDaLanchonete {
         'debito',
         'credito'
     ]
-
+    //Função para remover o acento da string
     removeAccents(str) {
         return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     }
 
-    validarProduto(metodoDePagamento,itens){
-        var pricipal = false;
+    validarProduto(formaDePagamento,itens){
+        var principal = false;
         var extra = false;
         var combo = false;
+        var countExtraSemPrincipal = 0;
         var produtos = [];
         var descricaoExtras = [];
-
+        
         if(itens.length == 0){
             return "Não há itens no carrinho de compra!";
         }
@@ -46,41 +47,49 @@ class CaixaDaLanchonete {
             produtos.push(codigo);
         }
 
-        if(this.formasDePagamento.indexOf(metodoDePagamento) == -1){
+        if(this.formasDePagamento.indexOf(formaDePagamento) == -1){
             return "Forma de pagamento inválida!";
         }
+
         for(var produto of produtos){
             for(var produtoCardapio of this.cardapio){
                 var [codigo, descricao, preco] = produtoCardapio.split(',');   
                 if(produto == codigo){
                     if(descricao.includes('extra')){
                         extra = true;
+                        //Comando para receber a descrição sem os acentos e toda em minúsculas.
                         var descricaoExtraFormatada = this.removeAccents(descricao.toLowerCase());
+                        //Comando para adicionar na lista somente a parte da descrição que está dentro do "()"
                         descricaoExtras.push(descricaoExtraFormatada.match(/\(([^)]+)\)/)?.[1] || "");
                     }
                     else if(codigo.includes('combo')){
                         combo = true;
                     }
                     else{
-                        pricipal = true;
+                        principal = true;
                     }
                 }
             }
         }
-        var count = 0;
-        if(pricipal == false && extra == true){
+        //Comando para verificar se tem itens extras sem pelo menos um principal
+        if(principal == false && extra){
             return "Item extra não pode ser pedido sem o principal";
         }
-        else if(pricipal == true && extra == true){
+        //Comando para verificar se tem combos, mas não tem itens principais
+        else if(principal == false && combo){
+            return "Item extra não pode ser pedido sem o principal";
+        }
+        else if(principal && extra){
             for(var produto of produtos){
                 for(var descricaoExtra of descricaoExtras){
                     if(!descricaoExtra.includes(produto)){
-                        count++;
+                        countExtraSemPrincipal++;
                     }
                 }
             }  
         }
-        if(count == produtos.length){
+        //Comando para verificar se o item "extra" tem o seu principal referente
+        if(countExtraSemPrincipal == produtos.length){
             return "Item extra não pode ser pedido sem o principal";
         }
         return "";
@@ -97,20 +106,20 @@ class CaixaDaLanchonete {
         return valorProduto; 
     }
 
-    calcularMetodoDePagamentoComSubTotal(metodoDePagamento, subTotal){
+    calcularMetodoDePagamentoComSubTotal(formaDePagamento, subTotal){
         var valorTotal = 0;
-        var valorMetodoDePagamento = 0;
-        switch(metodoDePagamento){
+        var valorFormaDePagamento = 0;
+        switch(formaDePagamento){
             case 'dinheiro':
-                valorMetodoDePagamento = (subTotal * 5) / 100;
-                valorTotal = subTotal - valorMetodoDePagamento;
+                valorFormaDePagamento = (subTotal * 5) / 100;
+                valorTotal = subTotal - valorFormaDePagamento;
                 break;
             case 'debito':
                 valorTotal = subTotal;
                 break;
             case 'credito':
-                valorMetodoDePagamento = (subTotal * 3) / 100;
-                valorTotal = subTotal + valorMetodoDePagamento;
+                valorFormaDePagamento = (subTotal * 3) / 100;
+                valorTotal = subTotal + valorFormaDePagamento;
                 break;
         }
         return valorTotal;
@@ -140,4 +149,6 @@ console.log(caixa.calcularValorDaCompra('credito', []));
 console.log(caixa.calcularValorDaCompra('credito', ['queijo,0','cafe,2']));
 console.log(caixa.calcularValorDaCompra('credito', ['0','cafe,2']));
 console.log(caixa.calcularValorDaCompra('creditoo', ['queijo,1','cafe,2']));
+console.log(caixa.calcularValorDaCompra('credito', ['queijo,1','combo1,2']));
+console.log(caixa.calcularValorDaCompra('credito', ['combo1,2']));
 export { CaixaDaLanchonete };
